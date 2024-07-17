@@ -15,20 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
-LANGFUSE_SK = os.getenv("LANGFUSE_SECRET_KEY")
-LANGFUSE_PK = os.getenv("LANGFUSE_PUBLIC_KEY")
-HOST = os.getenv("LANGFUSE_HOST")
 
-# langfuse_handler = CallbackHandler(
-#     secret_key=LANGFUSE_SK,
-#     public_key=LANGFUSE_PK,
-#     host=HOST,
-#     debug=True,
-#     session_id="1505",
-#     release="1.0.0",
-#     user_id="Krish",
-#     trace_name="WarehouseAst"
-# )
 
 # Function to create the chat chain
 def create_chat_chain(file_path, openai_model):
@@ -37,7 +24,7 @@ def create_chat_chain(file_path, openai_model):
         loader = UnstructuredPDFLoader(filepath)
         docs.extend(loader.load())
 
-    # Splitting txt
+    #Splitting txt
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=100
@@ -57,7 +44,7 @@ def create_chat_chain(file_path, openai_model):
     memory = ConversationBufferMemory(
         memory_key='chat_history',
         return_messages=True,
-        output_key='answer'  # Explicitly set the output key to avoid ambiguity 
+        output_key='answer'  #setting output key for indexing purpose
     )
 
     llm_def = ChatOpenAI(model=openai_model, temperature=0, api_key=API_KEY, max_tokens=1100)
@@ -71,7 +58,7 @@ def create_chat_chain(file_path, openai_model):
     )
     return chain
 
-# Function to process user input
+#processing the user input
 def process_input(chain, user_message):
     inputs = {"question": user_message}
     outputs = chain(inputs)
@@ -81,8 +68,6 @@ if __name__ == "__main__":
     openai_model = "gpt-3.5-turbo"
     file_path = [
         r"sat-practest.pdf"
-        #r"Advantage Dashboard Functional Description.pdf",
-        #r"user_guide.pdf"
     ]
     chain = create_chat_chain(file_path, openai_model)
 
