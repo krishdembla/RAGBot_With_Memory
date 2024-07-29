@@ -6,9 +6,7 @@ from langchain_community.document_loaders import UnstructuredPDFLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import DocArrayInMemorySearch
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain.prompts import PromptTemplate
-#from langfuse.callback import CallbackHandler
 
 import os
 from dotenv import load_dotenv
@@ -24,27 +22,36 @@ def create_chat_chain(file_path, openai_model):
         loader = UnstructuredPDFLoader(filepath)
         docs.extend(loader.load())
 
-    #Splitting txt
+    # Splitting text
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=100
     )
     split_documents = text_splitter.split_documents(docs)
 
-    #Creating embeddings
+    # Creating embeddings
     embeddings = OpenAIEmbeddings(api_key=API_KEY)
     vectordb = DocArrayInMemorySearch.from_documents(split_documents, embeddings)
 
-    #Retriever setip
+    # Retriever setup
     retriever = vectordb.as_retriever(
         search_type='mmr'
     )
 
-    #memory setup
+    # Memory setup
     memory = ConversationBufferMemory(
         memory_key='chat_history',
         return_messages=True,
-        output_key='answer'  #setting output key for indexing purpose
+        output_key='answer'  # setting output key for indexing purposes
+    )
+
+    # Prompt template with system message
+    system_message = """You are a helpful assistant that provides information about the content of a PDF document. The document is a SAT practice test. Please provide clear and accurate responses based on the document. If the answer is not available in the document, kindly state that the information is not found."""
+
+    prompt_template = PromptTemplate(
+        input_variables=["chat_history", "question"],
+        template="{system_message}\n\n{chat_history}\nUser: {question}\nAssistant:",
+        system_message=system_message
     )
 
     llm_def = ChatOpenAI(model=openai_model, temperature=0, api_key=API_KEY, max_tokens=1100)
@@ -52,20 +59,20 @@ def create_chat_chain(file_path, openai_model):
         llm=llm_def,
         retriever=retriever,
         memory=memory,
+        prompt=prompt_template,
         return_source_documents=True,
         verbose=True
-        #callbacks=[langfuse_handler]
     )
     return chain
 
-#processing the user input
+# Processing the user input
 def process_input(chain, user_message):
     inputs = {"question": user_message}
     outputs = chain(inputs)
     return outputs['answer']
 
 if __name__ == "__main__":
-    openai_model = "gpt-4o"
+    openai_model = "gpt-4"
     file_path = [
         r"sat-practest.pdf"
     ]
@@ -78,11 +85,9 @@ if __name__ == "__main__":
         with gr.Row():
             with gr.Column(scale=1):
                 gr.Markdown("**Here's how to use this demo:**")
-                gr.Markdown("""This a conversational agent responsible for summarizing, and giving key highlights about the atached pdf file (The SAT Practice Test 1) .\n
-                Feel free to experiment with your own different queries and usage or accesibility requests!
-                """)
+                gr.Markdown("""This a conversational agent responsible for summarizing, and giving key highlights about the attached pdf file (The SAT Practice Test 1). Feel free to experiment with your own different queries and usage or accessibility requests!""")
             with gr.Column(scale=3):
-                ex = ["Which question contains information about Navajo Nation legislator Annie Dodge Wauneka?", "What does question 7 in module 2 of reading and writing ask for?", "How many questions are there in moduule 2 of the reading and writing section?"]
+                ex = ["Which question contains information about Navajo Nation legislator Annie Dodge Wauneka?", "What does question 7 in module 2 of reading and writing ask for?", "How many questions are there in module 2 of the reading and writing section?"]
                 chatbot = gr.Chatbot()
                 msg = gr.Textbox()
                 gr.Examples(ex, msg)
