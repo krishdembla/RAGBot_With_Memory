@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 
-
 # Function to create the chat chain
 def create_chat_chain(file_path, openai_model):
     docs = []
@@ -49,9 +48,8 @@ def create_chat_chain(file_path, openai_model):
     system_message = """You are a helpful assistant that provides information about the content of a PDF document. The document is a SAT practice test. Please provide clear and accurate responses based on the document. If the answer is not available in the document, kindly state that the information is not found."""
 
     prompt_template = PromptTemplate(
-        input_variables=["chat_history", "question"],
-        template="{system_message}\n\n{chat_history}\nUser: {question}\nAssistant:",
-        system_message=system_message
+        input_variables=["context"],
+        template="{context}",
     )
 
     llm_def = ChatOpenAI(model=openai_model, temperature=0, api_key=API_KEY, max_tokens=1100)
@@ -59,7 +57,7 @@ def create_chat_chain(file_path, openai_model):
         llm=llm_def,
         retriever=retriever,
         memory=memory,
-        prompt=prompt_template,
+        condense_question_prompt=prompt_template,
         return_source_documents=True,
         verbose=True
     )
@@ -67,7 +65,10 @@ def create_chat_chain(file_path, openai_model):
 
 # Processing the user input
 def process_input(chain, user_message):
-    inputs = {"question": user_message}
+    system_message = "You are a helpful assistant that provides information about the content of a PDF document. The document is a SAT practice test. Please provide clear and accurate responses based on the document. If the answer is not available in the document, kindly state that the information is not found."
+    chat_history = chain.memory.chat_memory
+    context = f"{system_message}\n\n{chat_history}\nUser: {user_message}\nAssistant:"
+    inputs = {"context": context}
     outputs = chain(inputs)
     return outputs['answer']
 
