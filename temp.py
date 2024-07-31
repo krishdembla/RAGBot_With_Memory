@@ -1,11 +1,11 @@
 import gradio as gr
-from langchain_openai import ChatOpenAI
+from langchain.llms import OpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain_community.document_loaders import UnstructuredPDFLoader
-from langchain_openai import OpenAIEmbeddings
+from langchain.embeddings import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import DocArrayInMemorySearch
+from langchain.vectorstores import DocArrayInMemorySearch
 from langchain.prompts import PromptTemplate
 
 import os
@@ -52,7 +52,7 @@ def create_chat_chain(file_path, openai_model):
         template="{context}",
     )
 
-    llm_def = ChatOpenAI(model=openai_model, temperature=0, api_key=API_KEY, max_tokens=1100)
+    llm_def = OpenAI(model=openai_model, temperature=0, api_key=API_KEY, max_tokens=1100)
     chain = ConversationalRetrievalChain.from_llm(
         llm=llm_def,
         retriever=retriever,
@@ -65,10 +65,7 @@ def create_chat_chain(file_path, openai_model):
 
 # Processing the user input
 def process_input(chain, user_message):
-    system_message = "You are a helpful assistant that provides information about the content of a PDF document. The document is a SAT practice test. Please provide clear and accurate responses based on the document. If the answer is not available in the document, kindly state that the information is not found."
-    chat_history = chain.memory.chat_memory
-    context = f"{system_message}\n\n{chat_history}\nUser: {user_message}\nAssistant:"
-    inputs = {"context": context}
+    inputs = {"question": user_message}
     outputs = chain(inputs)
     return outputs['answer']
 
